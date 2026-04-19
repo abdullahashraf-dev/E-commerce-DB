@@ -30,8 +30,6 @@ The database has 5 tables:
 
 - One product can appear in many order detail rows.
 
-In short, order_details is a bridge table between orders and products.
-
 ## ERD
 
 ![ERD Diagram](e_commerce_db.png)
@@ -39,8 +37,6 @@ In short, order_details is a bridge table between orders and products.
 ## Create Schema
 
 1. [create-scheam.sql](create-scheam.sql) - Creates all tables and foreign key relations
-
-Imported content:
 
 ```sql
 CREATE TABLE categories (
@@ -90,8 +86,6 @@ CREATE TABLE order_details (
 
 1. [data.sql](data.sql) - Inserts sample data into all tables
 
-Imported content:
-
 ```sql
 INSERT INTO categories (category_name) VALUES
 ('Electronics'),
@@ -129,8 +123,6 @@ INSERT INTO order_details (order_id, product_id, quantity, unit_price) VALUES
 ## Queries
 
 1. [queries.sql](queries.sql) - Contains reporting and analytics queries
-
-Imported content:
 
 ```sql
 -- 1- Daily Revenue Calculation
