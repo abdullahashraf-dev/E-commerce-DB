@@ -154,8 +154,83 @@ WHERE o.order_date >= CURRENT_DATE - INTERVAL 1 MONTH
 GROUP BY c.customer_id, c.first_name, c.last_name
 HAVING total_spent > 500
 ORDER BY total_spent DESC;
+
+
+-- 4- Search products table avoiding (%) in first index can be used by Query Optimizer
+SELECT * FROM `E-commerce-DB`.products
+WHERE name LIKE 'camera%'
+OR description LIKE 'camera%';
+
+-- 5-recommend popular products in the same category for the same author,
+-- excluding the Purchased product from the recommendations for a customer(used cte for readability and maintainability rather than using subquery)
+
+WITH UserProductSales AS (
+   SELECT p.product_id, p.category_id
+   FROM products p
+   JOIN order_details od ON od.product_id = p.product_id
+   JOIN `orders` o ON od.order_id = o.order_id
+   WHERE o.customer_id = 6001
+   group by p.product_id,p.category_id
+),
+
+UserProductCategories AS (
+SELECT distinct ups.category_id
+FROM UserProductSales ups
+)
+
+SELECT p.* FROM products p
+join UserProductCategories upc ON upc.category_id = p.category_id
+LEFT join UserProductSales ups ON ups.product_id = p.product_id
+where ups.product_id IS null
+
 ```
 
 ## Denormalization
 
 For denormalization mechanism on customer and order entities we can add customer columns into the order entity which would make reading data faster as there is no need to join another table however this would duplicate customer data and if the customer need to update its data then it would required to update all rows containing that customer which would take time, also if the we want to delete the order then the data of customer no longer exist
+
+## Hierarchical Categories (Closure Table Pattern)
+
+To address the challenge of representing categories with self-relational subcategories with arbitrary depths, we can implement the Closure Table approach.
+
+The `categories` table includes a `parent_id`, and a new `category_tree` table is introduced to store all paths between ancestors and descendants.
+
+**Schema updates:**
+
+- `categories` (category_id, category_name, parent_id)
+- `category_tree` (ancestor_id, descendant_id, depth)
+
+![Category Self Relation](category-self-relation.png)
+
+### Fetching Subcategories
+
+We can fetch subcategories of a specific category easily by joining both tables. We can also limit the depth:
+
+```sql
+SELECT c.category_id, c.category_name, c.parent_id
+FROM categories c
+JOIN category_tree t ON c.category_id = t.descendant_id
+WHERE t.ancestor_id = 1
+  AND t.depth > 0;
+  -- we can also specify the depth e.g. AND t.depth < 4
+```
+
+Since each row contains its `parent_id`, mapping them correctly to display the hierarchy on the UI is straightforward.
+
+### Inserting a New Category
+
+When inserting a new category, first insert it into the `categories` table. Then, update the `category_tree`. For example, if the newly created category has `id = 5` and its parent is `2`:
+
+```sql
+-- Link the new category (e.g. 5) to all of its parent's (e.g. 2) ancestors, and link to itself
+INSERT INTO category_tree (ancestor_id, descendant_id, depth)
+SELECT ancestor_id, 5, depth + 1
+FROM category_tree
+WHERE descendant_id = 2 -- The parent category ID
+UNION ALL
+SELECT 5, 5, 0;         -- Self-relation entry
+```
+
+### Caching Strategy
+
+Since the read-to-write ratio for category trees is typically very high (frequent reads, rare updates), we can store the structured map in a Redis cache. This way, we avoid hitting the database and executing these joins every time the user requests the category navigation tree.
