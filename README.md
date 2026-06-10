@@ -234,3 +234,11 @@ SELECT 5, 5, 0;         -- Self-relation entry
 ### Caching Strategy
 
 Since the read-to-write ratio for category trees is typically very high (frequent reads, rare updates), we can store the structured map in a Redis cache. This way, we avoid hitting the database and executing these joins every time the user requests the category navigation tree.
+
+## Seed `user_info` with Stored Procedure (5,000,000 rows)
+
+This repository includes a stored procedure to create and seed a `user_info` table with large volumes (example: 5,000,000 rows).
+
+## Files
+
+- [stored-procedures/seed-user-info.sql](stored-procedures/seed-user-info.sql) — stored procedure that creates/seeds `user_info`
