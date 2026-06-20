@@ -392,7 +392,7 @@ LIMIT 10;
 
 **Execution Time Before Optimization:** 80,000 ms
 
-**Execution Time After Optimization:** 0.500 ms
+**Execution Time After Optimization:** 500 ms
 
 **Optimization Techniques:**
 
